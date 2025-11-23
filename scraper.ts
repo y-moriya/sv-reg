@@ -250,6 +250,10 @@ export class PokemonSVScraper {
 
   // NetlifyにJSONをアップロード
   async deployToNetlify(): Promise<void> {
+    // デプロイ前に最新のデータを取得
+    console.log("📥 デプロイ前に最新のデータを取得します\n");
+    await this.scrapeAll();
+
     // 環境変数から設定を取得
     const siteId = Deno.env.get("NETLIFY_SITE_ID");
     const accessToken = Deno.env.get("NETLIFY_ACCESS_TOKEN");
