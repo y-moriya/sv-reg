@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "dev": "deno run -A --unstable-kv main.ts scrape",
+    "scrape": "deno run -A --unstable-kv main.ts scrape",
     "list": "deno run -A --unstable-kv main.ts list",
     "json": "deno run -A --unstable-kv main.ts json"
   },

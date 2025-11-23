@@ -212,6 +212,9 @@ class PokemonSVScraper {
     console.log(`   スキップ（取得済み）: ${skipCount}件`);
     console.log(`   スキップ（シーズン情報なし）: ${invalidCount}件`);
     console.log("=".repeat(50));
+
+    // シーズン→レギュレーションマップを更新
+    await this.updateSeasonRegulationMap();
   }
 
   // 保存済みのニュース一覧を表示
@@ -236,8 +239,8 @@ class PokemonSVScraper {
     }
   }
 
-  // シーズン番号とレギュレーションの対応をJSON形式で出力
-  async outputJson(): Promise<void> {
+  // シーズン→レギュレーションマップをKVに保存
+  private async updateSeasonRegulationMap(): Promise<void> {
     const entries = this.kv.list<RankBattleNews>({ prefix: ["news"] });
     const seasonRegulationMap: { [key: number]: string } = {};
 
@@ -256,7 +259,21 @@ class PokemonSVScraper {
       result[season] = seasonRegulationMap[season];
     }
 
-    console.log(JSON.stringify(result, null, 2));
+    // KVに保存
+    await this.kv.set(["season_regulation_map"], result);
+    console.log("\n✓ シーズン→レギュレーションマップを更新しました");
+  }
+
+  // シーズン番号とレギュレーションの対応をJSON形式で出力
+  async outputJson(): Promise<void> {
+    const result = await this.kv.get<{ [key: number]: string }>(["season_regulation_map"]);
+    
+    if (result.value === null) {
+      console.error("シーズン→レギュレーションマップが見つかりません。先に 'scrape' を実行してください。");
+      Deno.exit(1);
+    }
+
+    console.log(JSON.stringify(result.value, null, 2));
   }
 }
 
