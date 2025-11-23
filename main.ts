@@ -98,18 +98,18 @@ class PokemonSVScraper {
   }
 
   // レギュレーションを抽出（例: "レギュレーションJ" → "J"）
-private extractRegulation(text: string): string | null {
-  const regulationMatch = text.match(/レギュレーション([A-ZＡ-Ｚ])/);
-  if (regulationMatch && regulationMatch[1]) {
-    const letter = regulationMatch[1];
-    // 全角の場合は半角に変換
-    if (letter.charCodeAt(0) >= 0xFF21 && letter.charCodeAt(0) <= 0xFF3A) {
-      return String.fromCharCode(letter.charCodeAt(0) - 0xFEE0);
+  private extractRegulation(text: string): string | null {
+    const regulationMatch = text.match(/レギュレーション([A-ZＡ-Ｚ])/);
+    if (regulationMatch && regulationMatch[1]) {
+      const letter = regulationMatch[1];
+      // 全角の場合は半角に変換
+      if (letter.charCodeAt(0) >= 0xFF21 && letter.charCodeAt(0) <= 0xFF3A) {
+        return String.fromCharCode(letter.charCodeAt(0) - 0xFEE0);
+      }
+      return letter;
     }
-    return letter;
+    return null;
   }
-  return null;
-}
 
   // 個別ページから情報を抽出
   async extractPageContent(newsItem: NewsListItem): Promise<RankBattleNews | null> {
@@ -235,6 +235,29 @@ private extractRegulation(text: string): string | null {
       console.log("まだお知らせは保存されていません。");
     }
   }
+
+  // シーズン番号とレギュレーションの対応をJSON形式で出力
+  async outputJson(): Promise<void> {
+    const entries = this.kv.list<RankBattleNews>({ prefix: ["news"] });
+    const seasonRegulationMap: { [key: number]: string } = {};
+
+    for await (const entry of entries) {
+      const news = entry.value;
+      seasonRegulationMap[news.season] = news.regulation;
+    }
+
+    // シーズン番号でソート
+    const sortedSeasons = Object.keys(seasonRegulationMap)
+      .map(Number)
+      .sort((a, b) => a - b);
+
+    const result: { [key: number]: string } = {};
+    for (const season of sortedSeasons) {
+      result[season] = seasonRegulationMap[season];
+    }
+
+    console.log(JSON.stringify(result, null, 2));
+  }
 }
 
 // メイン処理
@@ -257,10 +280,16 @@ async function main() {
         await scraper.listSavedNews();
         break;
 
+      case "json":
+        // シーズン番号とレギュレーションをJSON形式で出力
+        await scraper.outputJson();
+        break;
+
       default:
         console.log("使用方法:");
         console.log("  deno run --allow-net --allow-read --allow-write --unstable-kv main.ts scrape");
         console.log("  deno run --allow-net --allow-read --allow-write --unstable-kv main.ts list");
+        console.log("  deno run --allow-net --allow-read --allow-write --unstable-kv main.ts json");
     }
   } finally {
     kv.close();
