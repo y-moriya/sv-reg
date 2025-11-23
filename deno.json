@@ -1,0 +1,9 @@
+{
+  "tasks": {
+    "dev": "deno run -A --unstable-kv main.ts scrape",
+    "list": "deno run -A --unstable-kv main.ts list"
+  },
+  "imports": {
+    "@b-fuze/deno-dom": "jsr:@b-fuze/deno-dom@^0.1.56"
+  }
+}
