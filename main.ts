@@ -2,6 +2,7 @@
 // 実行方法: deno run --allow-net --allow-read --allow-write --unstable-kv main.ts
 
 import { DOMParser } from "@b-fuze/deno-dom";
+import "@std/dotenv/load";
 
 const LIST_JSON_URL = "https://sv-news.pokemon.co.jp/ja/json/list.json";
 const BASE_URL = "https://sv-news.pokemon.co.jp/ja";
@@ -275,6 +276,101 @@ class PokemonSVScraper {
 
     console.log(JSON.stringify(result.value, null, 2));
   }
+
+  // NetlifyにJSONをアップロード
+  async deployToNetlify(): Promise<void> {
+    // 環境変数から設定を取得
+    const siteId = Deno.env.get("NETLIFY_SITE_ID");
+    const accessToken = Deno.env.get("NETLIFY_ACCESS_TOKEN");
+
+    if (!siteId || !accessToken) {
+      console.error("環境変数 NETLIFY_SITE_ID と NETLIFY_ACCESS_TOKEN を設定してください。");
+      Deno.exit(1);
+    }
+
+    // シーズン→レギュレーションマップを取得
+    const result = await this.kv.get<{ [key: number]: string }>(["season_regulation_map"]);
+    
+    if (result.value === null) {
+      console.error("シーズン→レギュレーションマップが見つかりません。先に 'scrape' を実行してください。");
+      Deno.exit(1);
+    }
+
+    // JSONを整形して文字列化
+    const jsonString = JSON.stringify(result.value, null, 2);
+    const jsonBytes = new TextEncoder().encode(jsonString);
+
+    // SHA1ハッシュを計算
+    const hashBuffer = await crypto.subtle.digest("SHA-1", jsonBytes);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const sha1 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    console.log(`\n📦 Netlifyへのデプロイを開始します`);
+    console.log(`  サイトID: ${siteId}`);
+    console.log(`  ファイル: map.json`);
+    console.log(`  SHA1: ${sha1}`);
+
+    // ステップ1: デプロイを作成してファイルダイジェストを送信
+    const deployUrl = `https://api.netlify.com/api/v1/sites/${siteId}/deploys`;
+    const deployPayload = {
+      files: {
+        "/map.json": sha1
+      }
+    };
+
+    console.log(`\n🚀 デプロイを作成中...`);
+    const deployResponse = await fetch(deployUrl, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(deployPayload)
+    });
+
+    if (!deployResponse.ok) {
+      const errorText = await deployResponse.text();
+      console.error(`❌ デプロイの作成に失敗: ${deployResponse.status} ${deployResponse.statusText}`);
+      console.error(errorText);
+      Deno.exit(1);
+    }
+
+    const deployData = await deployResponse.json();
+    const deployId = deployData.id;
+    const required = deployData.required || [];
+
+    console.log(`  ✓ デプロイID: ${deployId}`);
+    console.log(`  必要なファイル: ${required.length}件`);
+
+    // ステップ2: 必要なファイルをアップロード
+    if (required.includes(sha1)) {
+      console.log(`\n📤 ファイルをアップロード中...`);
+      const uploadUrl = `https://api.netlify.com/api/v1/deploys/${deployId}/files/map.json`;
+      
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/octet-stream"
+        },
+        body: jsonBytes
+      });
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error(`❌ ファイルのアップロードに失敗: ${uploadResponse.status} ${uploadResponse.statusText}`);
+        console.error(errorText);
+        Deno.exit(1);
+      }
+
+      console.log(`  ✓ ファイルをアップロードしました`);
+    } else {
+      console.log(`  ℹ️  ファイルは既にアップロード済みです`);
+    }
+
+    console.log(`\n✅ デプロイが完了しました！`);
+    console.log(`  デプロイURL: https://app.netlify.com/sites/${siteId}/deploys/${deployId}`);
+  }
 }
 
 // メイン処理
@@ -302,11 +398,17 @@ async function main() {
         await scraper.outputJson();
         break;
 
+      case "deploy":
+        // NetlifyにJSONをデプロイ
+        await scraper.deployToNetlify();
+        break;
+
       default:
         console.log("使用方法:");
         console.log("  deno run --allow-net --allow-read --allow-write --unstable-kv main.ts scrape");
         console.log("  deno run --allow-net --allow-read --allow-write --unstable-kv main.ts list");
         console.log("  deno run --allow-net --allow-read --allow-write --unstable-kv main.ts json");
+        console.log("  deno run --allow-net --allow-read --allow-write --allow-env --unstable-kv main.ts deploy");
     }
   } finally {
     kv.close();

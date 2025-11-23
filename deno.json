@@ -2,9 +2,11 @@
   "tasks": {
     "scrape": "deno run -A --unstable-kv main.ts scrape",
     "list": "deno run -A --unstable-kv main.ts list",
-    "json": "deno run -A --unstable-kv main.ts json"
+    "json": "deno run -A --unstable-kv main.ts json",
+    "deploy": "deno run -A --unstable-kv main.ts deploy"
   },
   "imports": {
-    "@b-fuze/deno-dom": "jsr:@b-fuze/deno-dom@^0.1.56"
+    "@b-fuze/deno-dom": "jsr:@b-fuze/deno-dom@^0.1.56",
+    "@std/dotenv": "jsr:@std/dotenv@^0.225.5"
   }
 }

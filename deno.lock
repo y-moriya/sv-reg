@@ -3,6 +3,7 @@
   "specifiers": {
     "jsr:@b-fuze/deno-dom@~0.1.56": "0.1.56",
     "jsr:@denosaurs/plug@1.1.0": "1.1.0",
+    "jsr:@std/dotenv@~0.225.5": "0.225.5",
     "jsr:@std/encoding@1": "1.0.10",
     "jsr:@std/fmt@1": "1.0.8",
     "jsr:@std/fs@1": "1.0.20",
@@ -25,6 +26,9 @@
         "jsr:@std/fs",
         "jsr:@std/path@1"
       ]
+    },
+    "@std/dotenv@0.225.5": {
+      "integrity": "9ce6f9d0ec3311f74a32535aa1b8c62ed88b1ab91b7f0815797d77a6f60c922f"
     },
     "@std/encoding@1.0.9": {
       "integrity": "025b8f18eb1749bc30d1353bf48b77d1eb5e35610220fa226f5a046b9240c5d7"
@@ -63,7 +67,8 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@b-fuze/deno-dom@~0.1.56"
+      "jsr:@b-fuze/deno-dom@~0.1.56",
+      "jsr:@std/dotenv@~0.225.5"
     ]
   }
 }
